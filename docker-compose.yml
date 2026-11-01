@@ -6,7 +6,7 @@ services:
     container_name: edgepilot-user-app
     restart: unless-stopped
     ports:
-      - "127.0.0.1:3000:3000"
+      - "127.0.0.1:3000:80"
 
   admin-dashboard:
     build:
@@ -14,7 +14,7 @@ services:
     container_name: edgepilot-admin
     restart: unless-stopped
     ports:
-      - "127.0.0.1:3001:3000"
+      - "127.0.0.1:3001:80"
 
   api-service:
     build:

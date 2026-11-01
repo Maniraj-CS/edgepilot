@@ -1,0 +1,444 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EdgePilot Store</title>
+
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+
+<body class="bg-gray-100 text-gray-900">
+
+    <!-- Navbar -->
+    <nav class="bg-gray-900 text-white px-8 py-5 flex justify-between items-center">
+        <h1 class="text-2xl font-bold">EdgePilot Store</h1>
+
+        <div class="flex gap-6">
+            <a href="#products" class="hover:text-blue-400">Products</a>
+            <a href="#orders" class="hover:text-blue-400">Orders</a>
+        </div>
+    </nav>
+
+    <!-- Hero -->
+    <section class="bg-blue-600 text-white text-center py-16 px-4">
+        <h2 class="text-4xl font-bold mb-4">
+            Welcome to EdgePilot Store
+        </h2>
+
+        <p class="text-lg text-blue-100">
+            Find your favourite products at great prices.
+        </p>
+    </section>
+
+    <!-- Products -->
+    <main class="max-w-6xl mx-auto px-6 py-12" id="products">
+
+        <div class="flex justify-between items-center mb-8">
+            <h2 class="text-3xl font-bold">Our Products</h2>
+
+            <button
+                onclick="loadProducts()"
+                class="bg-gray-900 text-white px-4 py-2 rounded-lg hover:bg-gray-700">
+                Refresh
+            </button>
+        </div>
+
+        <p id="product-message" class="text-gray-500 mb-4">
+            Loading products...
+        </p>
+
+        <div id="product-list"
+             class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
+        </div>
+    </main>
+
+    <!-- Orders -->
+    <section id="orders" class="max-w-6xl mx-auto px-6 pb-16">
+
+        <div class="flex justify-between items-center mb-6">
+            <h2 class="text-3xl font-bold">Your Orders</h2>
+
+            <button
+                onclick="loadOrders()"
+                class="bg-blue-600 text-white px-5 py-2 rounded-lg hover:bg-blue-700">
+                Refresh Orders
+            </button>
+        </div>
+
+        <div id="order-list" class="space-y-4"></div>
+
+    </section>
+
+    <!-- Payment Modal -->
+    <div id="payment-modal"
+         class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4">
+
+        <div class="bg-white rounded-xl shadow-xl p-8 max-w-md w-full">
+
+            <h2 class="text-2xl font-bold mb-4">Payment Details</h2>
+
+            <div class="bg-gray-100 rounded-lg p-4 mb-5">
+                <p class="text-gray-500 text-sm">Order ID</p>
+                <p id="payment-order-id" class="font-semibold mb-3"></p>
+
+                <p class="text-gray-500 text-sm">Amount</p>
+                <p id="payment-amount" class="text-2xl font-bold text-blue-600"></p>
+            </div>
+
+            <label class="block font-medium mb-2">
+                Payment Method
+            </label>
+
+            <select id="payment-method"
+                    class="w-full border rounded-lg p-3 mb-5">
+                <option value="demo">Demo Payment</option>
+                <option value="card">Card (Simulation)</option>
+                <option value="wallet">Wallet (Simulation)</option>
+            </select>
+
+            <div class="flex gap-3">
+                <button
+                    onclick="processPayment()"
+                    id="pay-button"
+                    class="flex-1 bg-green-600 text-white py-3 rounded-lg hover:bg-green-700">
+                    Pay Now
+                </button>
+
+                <button
+                    onclick="closePaymentModal()"
+                    class="flex-1 bg-gray-200 py-3 rounded-lg hover:bg-gray-300">
+                    Cancel
+                </button>
+            </div>
+
+            <p id="payment-message" class="mt-4 text-sm text-center"></p>
+
+        </div>
+    </div>
+
+    <footer class="bg-gray-900 text-gray-400 text-center py-6">
+        EdgePilot Store — Powered by EdgePilot Gateway
+    </footer>
+
+    <script>
+        // Local development URLs
+        const API_URL = "http://localhost:4001";
+        const PAYMENT_URL = "http://localhost:4003";
+
+        let currentOrder = null;
+
+        // Load products
+        async function loadProducts() {
+            const productList = document.getElementById("product-list");
+            const message = document.getElementById("product-message");
+
+            message.textContent = "Loading products...";
+            productList.innerHTML = "";
+
+            try {
+                const response = await fetch(`${API_URL}/products`);
+
+                if (!response.ok) {
+                    throw new Error("Unable to fetch products");
+                }
+
+                const result = await response.json();
+
+                message.textContent =
+                    `${result.data.length} products available`;
+
+                result.data.forEach(product => {
+                    const card = document.createElement("div");
+
+                    card.className =
+                        "bg-white rounded-xl shadow p-6 flex flex-col";
+
+                    const title = document.createElement("h3");
+                    title.className = "text-xl font-bold mb-2";
+                    title.textContent = product.name;
+
+                    const price = document.createElement("p");
+                    price.className =
+                        "text-blue-600 text-lg font-semibold mb-2";
+                    price.textContent = `Rs. ${product.price}`;
+
+                    const stock = document.createElement("p");
+                    stock.className = "text-gray-500 mb-5";
+                    stock.textContent = `Stock: ${product.stock}`;
+
+                    const button = document.createElement("button");
+                    button.className =
+                        "bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700 mt-auto";
+
+                    button.textContent = "Buy Now";
+                    button.disabled = product.stock <= 0;
+
+                    if (product.stock <= 0) {
+                        button.classList.add(
+                            "opacity-50",
+                            "cursor-not-allowed"
+                        );
+                    }
+
+                    button.addEventListener("click", () => {
+                        createOrder(product.id);
+                    });
+
+                    card.append(title, price, stock, button);
+                    productList.appendChild(card);
+                });
+
+            } catch (error) {
+                message.textContent =
+                    "Could not connect to API service.";
+
+                console.error(error);
+            }
+        }
+
+        // Create order
+        async function createOrder(productId) {
+            const quantityInput = prompt("Enter quantity:", "1");
+
+            if (quantityInput === null) return;
+
+            const quantity = Number(quantityInput);
+
+            if (!Number.isInteger(quantity) || quantity <= 0) {
+                alert("Please enter a valid quantity.");
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_URL}/orders`, {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify({
+                        productId,
+                        quantity
+                    })
+                });
+
+                const result = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(result.message);
+                }
+
+                alert("Order created successfully!");
+
+                // Refresh products and orders
+                loadProducts();
+                loadOrders();
+
+            } catch (error) {
+                alert(error.message);
+            }
+        }
+
+        // Open payment modal for selected order
+        function openPaymentModal(order) {
+            currentOrder = order;
+
+            document.getElementById("payment-order-id").textContent =
+                `#${order.id}`;
+
+            document.getElementById("payment-amount").textContent =
+                `Rs. ${order.totalPrice}`;
+
+            document.getElementById("payment-message").textContent = "";
+
+            const button = document.getElementById("pay-button");
+            button.disabled = false;
+            button.textContent = "Pay Now";
+
+            document.getElementById("payment-modal")
+                .classList.remove("hidden");
+        }
+
+        // Close payment modal
+        function closePaymentModal() {
+            document.getElementById("payment-modal")
+                .classList.add("hidden");
+
+            currentOrder = null;
+        }
+
+        // Process payment request
+        async function processPayment() {
+            if (!currentOrder) return;
+
+            const button = document.getElementById("pay-button");
+            const message = document.getElementById("payment-message");
+
+            button.disabled = true;
+            button.textContent = "Processing...";
+            message.textContent = "";
+
+            try {
+                const response = await fetch(`${PAYMENT_URL}/payments`, {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify({
+                        orderId: currentOrder.id,
+                        amount: currentOrder.totalPrice,
+                        method: document.getElementById("payment-method").value
+                    })
+                });
+
+                const result = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(result.message);
+                }
+
+                message.className =
+                    "mt-4 text-sm text-center text-green-600";
+
+                message.textContent =
+                    `Payment request created! Payment ID: ${result.data.id}. Status: ${result.data.status}`;
+
+                button.textContent = "Request Created";
+
+                setTimeout(() => {
+                    closePaymentModal();
+                    loadOrders();
+                }, 2000);
+
+            } catch (error) {
+                message.className =
+                    "mt-4 text-sm text-center text-red-600";
+
+                message.textContent = error.message;
+
+                button.disabled = false;
+                button.textContent = "Try Again";
+            }
+        }
+
+        // Load orders and payment records
+        async function loadOrders() {
+            const orderList = document.getElementById("order-list");
+
+            orderList.innerHTML = "Loading orders...";
+
+            try {
+                const response = await fetch(`${API_URL}/orders`);
+
+                if (!response.ok) {
+                    throw new Error("Unable to fetch orders");
+                }
+
+                const result = await response.json();
+
+                // Get payment records separately
+                let payments = [];
+
+                try {
+                    const paymentResponse =
+                        await fetch(`${PAYMENT_URL}/payments`);
+
+                    if (paymentResponse.ok) {
+                        const paymentResult =
+                            await paymentResponse.json();
+
+                        payments = paymentResult.data || [];
+                    }
+                } catch (error) {
+                    console.error("Payment service unavailable:", error);
+                }
+
+                orderList.innerHTML = "";
+
+                if (result.data.length === 0) {
+                    orderList.textContent = "No orders yet.";
+                    return;
+                }
+
+                result.data.forEach(order => {
+                    const item = document.createElement("div");
+
+                    item.className =
+                        "bg-white shadow rounded-lg p-5 flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4";
+
+                    const details = document.createElement("div");
+
+                    const title = document.createElement("h3");
+                    title.className = "font-bold";
+                    title.textContent = `Order #${order.id}`;
+
+                    const product = document.createElement("p");
+                    product.className = "text-gray-600";
+                    product.textContent =
+                        `${order.productName} × ${order.quantity}`;
+
+                    const total = document.createElement("p");
+                    total.className =
+                        "text-blue-600 font-semibold";
+                    total.textContent =
+                        `Total: Rs. ${order.totalPrice}`;
+
+                    const existingPayment = payments.find(
+                        payment => payment.orderId === order.id
+                    );
+
+                    const status = document.createElement("p");
+                    status.className =
+                        "text-sm font-medium mt-1";
+
+                    if (existingPayment) {
+                        status.classList.add("text-orange-600");
+                        status.textContent =
+                            `Payment: ${existingPayment.status}`;
+                    } else {
+                        status.classList.add("text-gray-500");
+                        status.textContent = "Payment: Not started";
+                    }
+
+                    details.append(title, product, total, status);
+
+                    const payButton = document.createElement("button");
+
+                    payButton.className =
+                        "bg-green-600 text-white px-6 py-3 rounded-lg hover:bg-green-700";
+
+                    payButton.textContent =
+                        existingPayment ? "Payment Requested" : "Pay Now";
+
+                    payButton.disabled = Boolean(existingPayment);
+
+                    if (existingPayment) {
+                        payButton.classList.add(
+                            "opacity-50",
+                            "cursor-not-allowed"
+                        );
+                    } else {
+                        payButton.addEventListener("click", () => {
+                            openPaymentModal(order);
+                        });
+                    }
+
+                    item.append(details, payButton);
+                    orderList.appendChild(item);
+                });
+
+            } catch (error) {
+                orderList.textContent = "Could not load orders.";
+                console.error(error);
+            }
+        }
+
+        // Initial load
+        loadProducts();
+        loadOrders();
+
+    </script>
+
+</body>
+</html>

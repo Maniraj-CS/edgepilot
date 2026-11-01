@@ -1,0 +1,240 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EdgePilot Admin Dashboard</title>
+
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+
+<body class="bg-gray-100 text-gray-900">
+
+    <!-- Navbar -->
+    <nav class="bg-gray-900 text-white px-8 py-5 flex justify-between items-center">
+        <h1 class="text-2xl font-bold">EdgePilot Admin</h1>
+
+        <span class="text-sm text-gray-300">Management Dashboard</span>
+    </nav>
+
+    <main class="max-w-7xl mx-auto px-6 py-10">
+
+        <!-- Dashboard Header -->
+        <div class="mb-8">
+            <h2 class="text-3xl font-bold">Dashboard</h2>
+            <p class="text-gray-500 mt-2">
+                Manage your store products and orders.
+            </p>
+        </div>
+
+        <!-- Statistics -->
+        <section class="grid grid-cols-1 sm:grid-cols-3 gap-6 mb-10">
+
+            <div class="bg-white p-6 rounded-xl shadow">
+                <p class="text-gray-500">Total Products</p>
+                <h3 id="total-products" class="text-3xl font-bold mt-2">0</h3>
+            </div>
+
+            <div class="bg-white p-6 rounded-xl shadow">
+                <p class="text-gray-500">Total Orders</p>
+                <h3 id="total-orders" class="text-3xl font-bold mt-2">0</h3>
+            </div>
+
+            <div class="bg-white p-6 rounded-xl shadow">
+                <p class="text-gray-500">Total Order Value</p>
+                <h3 id="total-revenue" class="text-3xl font-bold mt-2">Rs. 0</h3>
+            </div>
+
+        </section>
+
+        <!-- Products -->
+        <section class="bg-white rounded-xl shadow p-6 mb-10">
+
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-2xl font-bold">Products</h2>
+
+                <button onclick="loadDashboard()"
+                    class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700">
+                    Refresh
+                </button>
+            </div>
+
+            <div class="overflow-x-auto">
+                <table class="w-full text-left">
+                    <thead>
+                        <tr class="border-b text-gray-500">
+                            <th class="p-3">ID</th>
+                            <th class="p-3">Product</th>
+                            <th class="p-3">Price</th>
+                            <th class="p-3">Stock</th>
+                        </tr>
+                    </thead>
+
+                    <tbody id="product-table"></tbody>
+                </table>
+            </div>
+
+        </section>
+
+        <!-- Orders -->
+        <section class="bg-white rounded-xl shadow p-6">
+
+            <h2 class="text-2xl font-bold mb-6">Recent Orders</h2>
+
+            <div class="overflow-x-auto">
+                <table class="w-full text-left">
+                    <thead>
+                        <tr class="border-b text-gray-500">
+                            <th class="p-3">Order ID</th>
+                            <th class="p-3">Product</th>
+                            <th class="p-3">Quantity</th>
+                            <th class="p-3">Total</th>
+                            <th class="p-3">Status</th>
+                        </tr>
+                    </thead>
+
+                    <tbody id="order-table"></tbody>
+                </table>
+            </div>
+
+        </section>
+
+        <p id="error-message" class="text-red-600 mt-5"></p>
+
+    </main>
+
+    <footer class="bg-gray-900 text-gray-400 text-center py-5 mt-10">
+        EdgePilot Admin Dashboard
+    </footer>
+
+    <script>
+        // Local development API URL
+        const API_URL = "http://localhost:4001";
+
+        async function loadDashboard() {
+            const errorMessage = document.getElementById("error-message");
+            errorMessage.textContent = "";
+
+            try {
+                const [productResponse, orderResponse] = await Promise.all([
+                    fetch(`${API_URL}/products`),
+                    fetch(`${API_URL}/orders`)
+                ]);
+
+                if (!productResponse.ok || !orderResponse.ok) {
+                    throw new Error("API request failed");
+                }
+
+                const productResult = await productResponse.json();
+                const orderResult = await orderResponse.json();
+
+                const products = productResult.data;
+                const orders = orderResult.data;
+
+                updateStatistics(products, orders);
+                renderProducts(products);
+                renderOrders(orders);
+
+            } catch (error) {
+                errorMessage.textContent =
+                    "Unable to connect to API service. Check whether the API is running.";
+
+                console.error(error);
+            }
+        }
+
+        // Update statistics
+        function updateStatistics(products, orders) {
+            const totalProducts = products.length;
+            const totalOrders = orders.length;
+
+            const totalRevenue = orders.reduce(
+                (sum, order) => sum + order.totalPrice,
+                0
+            );
+
+            document.getElementById("total-products").textContent =
+                totalProducts;
+
+            document.getElementById("total-orders").textContent =
+                totalOrders;
+
+            document.getElementById("total-revenue").textContent =
+                `Rs. ${totalRevenue}`;
+        }
+
+        // Render products
+        function renderProducts(products) {
+            const table = document.getElementById("product-table");
+            table.innerHTML = "";
+
+            products.forEach(product => {
+                const row = document.createElement("tr");
+                row.className = "border-b";
+
+                const values = [
+                    product.id,
+                    product.name,
+                    `Rs. ${product.price}`,
+                    product.stock
+                ];
+
+                values.forEach(value => {
+                    const cell = document.createElement("td");
+                    cell.className = "p-3";
+                    cell.textContent = value;
+                    row.appendChild(cell);
+                });
+
+                table.appendChild(row);
+            });
+        }
+
+        // Render orders
+        function renderOrders(orders) {
+            const table = document.getElementById("order-table");
+            table.innerHTML = "";
+
+            if (orders.length === 0) {
+                const row = document.createElement("tr");
+                const cell = document.createElement("td");
+
+                cell.colSpan = 5;
+                cell.className = "p-4 text-gray-500";
+                cell.textContent = "No orders found.";
+
+                row.appendChild(cell);
+                table.appendChild(row);
+                return;
+            }
+
+            orders.forEach(order => {
+                const row = document.createElement("tr");
+                row.className = "border-b";
+
+                const values = [
+                    order.id,
+                    order.productName,
+                    order.quantity,
+                    `Rs. ${order.totalPrice}`,
+                    order.status
+                ];
+
+                values.forEach(value => {
+                    const cell = document.createElement("td");
+                    cell.className = "p-3";
+                    cell.textContent = value;
+                    row.appendChild(cell);
+                });
+
+                table.appendChild(row);
+            });
+        }
+
+        // Initial dashboard load
+        loadDashboard();
+    </script>
+
+</body>
+</html>
