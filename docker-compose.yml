@@ -1,0 +1,41 @@
+
+services:
+  user-app:
+    build:
+      context: ./micro-frontends/user-app
+    container_name: edgepilot-user-app
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:3000:3000"
+
+  admin-dashboard:
+    build:
+      context: ./micro-frontends/admin
+    container_name: edgepilot-admin
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:3001:3000"
+
+  api-service:
+    build:
+      context: ./micro-services/api
+    container_name: edgepilot-api
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:4001:4000"
+
+  auth-service:
+    build:
+      context: ./micro-services/auth
+    container_name: edgepilot-auth
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:4002:4000"
+
+  payment-service:
+    build:
+      context: ./micro-services/payment
+    container_name: edgepilot-payment
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:4003:4000"

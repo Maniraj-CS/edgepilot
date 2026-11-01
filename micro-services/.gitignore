@@ -1,0 +1,18 @@
+# Node.js dependencies
+node_modules/
+**/node_modules/
+
+# Environment variables
+.env
+.env.*
+
+# Allow example environment file
+!.env.example
+
+# Logs
+*.log
+npm-debug.log*
+
+# OS files
+.DS_Store
+Thumbs.db
